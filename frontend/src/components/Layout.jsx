@@ -26,23 +26,27 @@ export const Header = () => {
         </Link>
 
         <nav className="flex items-center gap-5 sm:gap-6">
-          <Link to="/practice" data-testid="nav-practice" className={linkCls("/practice")}>
-            Practice
-          </Link>
-          <Link to="/rest-playground" data-testid="nav-api" className={linkCls("/rest-playground")}>
-            API Playground
-          </Link>
-          <Link to="/shop" data-testid="nav-shop" className={linkCls("/shop")}>
-            Shop
-          </Link>
-          <Link to="/shop/cart" data-testid="nav-cart" className="relative text-zinc-400 hover:text-zinc-100 transition-colors">
-            <ShoppingCart className="w-5 h-5" />
-            {count > 0 && (
-              <span data-testid="cart-badge" className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
-                {count}
-              </span>
-            )}
-          </Link>
+          {user && (
+            <>
+              <Link to="/practice" data-testid="nav-practice" className={linkCls("/practice")}>
+                Practice
+              </Link>
+              <Link to="/rest-playground" data-testid="nav-api" className={linkCls("/rest-playground")}>
+                API Playground
+              </Link>
+              <Link to="/shop" data-testid="nav-shop" className={linkCls("/shop")}>
+                Shop
+              </Link>
+              <Link to="/shop/cart" data-testid="nav-cart" className="relative text-zinc-400 hover:text-zinc-100 transition-colors">
+                <ShoppingCart className="w-5 h-5" />
+                {count > 0 && (
+                  <span data-testid="cart-badge" className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                    {count}
+                  </span>
+                )}
+              </Link>
+            </>
+          )}
           {user ? (
             <div className="flex items-center gap-3">
               <span data-testid="current-user-email" className="hidden sm:flex items-center gap-1.5 text-sm text-zinc-400">

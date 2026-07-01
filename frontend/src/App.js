@@ -27,12 +27,12 @@ function App() {
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/practice" element={<Practice />} />
-              <Route path="/practice/:slug" element={<SectionPage />} />
-              <Route path="/rest-playground" element={<ApiPlayground />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/shop/product/:id" element={<ProductDetail />} />
-              <Route path="/shop/cart" element={<Cart />} />
+              <Route path="/practice" element={<ProtectedRoute><Practice /></ProtectedRoute>} />
+              <Route path="/practice/:slug" element={<ProtectedRoute><SectionPage /></ProtectedRoute>} />
+              <Route path="/rest-playground" element={<ProtectedRoute><ApiPlayground /></ProtectedRoute>} />
+              <Route path="/shop" element={<ProtectedRoute><Shop /></ProtectedRoute>} />
+              <Route path="/shop/product/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
+              <Route path="/shop/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
               <Route path="/shop/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
               <Route path="/shop/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             </Routes>

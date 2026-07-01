@@ -28,7 +28,7 @@ export default function Login() {
     <div className="flex items-center justify-center px-4 py-20">
       <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-2xl shadow-black/40">
         <h1 className="font-heading text-2xl font-black tracking-tight text-zinc-50">Login</h1>
-        <p className="mt-1 text-sm text-zinc-400">Use the seeded admin: admin@example.com / admin123</p>
+        <p className="mt-1 text-sm text-zinc-400">Sign in to access the practice ground.</p>
 
         {error && (
           <div data-testid="login-error" className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">

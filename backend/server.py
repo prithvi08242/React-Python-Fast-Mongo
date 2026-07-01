@@ -469,12 +469,30 @@ async def seed_admin():
         await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
 
 
+async def seed_default_user():
+    email = os.environ.get("DEFAULT_USER_EMAIL", "tester@practiceground.dev").lower()
+    password = os.environ.get("DEFAULT_USER_PASSWORD", "Test@Ground2026")
+    existing = await db.users.find_one({"email": email})
+    if existing is None:
+        await db.users.insert_one({
+            "email": email,
+            "password_hash": hash_password(password),
+            "name": "Default Tester",
+            "role": "user",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        logger.info("Seeded default user %s", email)
+    elif not verify_password(password, existing["password_hash"]):
+        await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(password)}})
+
+
 @app.on_event("startup")
 async def on_startup():
     await db.users.create_index("email", unique=True)
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.login_attempts.create_index("identifier")
     await seed_admin()
+    await seed_default_user()
     await seed_products()
 
 
