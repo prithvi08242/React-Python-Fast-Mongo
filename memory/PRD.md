@@ -25,6 +25,7 @@ SDET + DevOps engineer wants 3-tier full-stack project(s) with multiple tools/la
 - All 30 practice sections rendering; representative subset verified via testing agent (basic-form, table, modal, tabs, slider, date, dynamic-list, shadow-dom, network-delay, flaky, etc.).
 - API Playground UI at `/rest-playground` (renamed from `/api-playground` to avoid `/api/*` ingress collision — CRITICAL fix).
 - Docker, docker-compose, GitHub Actions CI, README, pytest + Playwright + Jest samples.
+- **E-commerce module "Gadget Store" (2026-07-01):** 6 seeded products (AI-generated dark product images), category + search filters, product detail, localStorage cart with header badge, auth-gated checkout (server-side total computation), order history scoped per user. Backend 13/13 + frontend 11/11 flows green. Routes: `/shop`, `/shop/product/:id`, `/shop/cart`, `/shop/checkout` (protected), `/shop/orders` (protected). API: `/api/shop/products`, `/api/shop/products/{id}`, `POST/GET /api/shop/orders`.
 
 ## Known Minor Items (deferred, low impact)
 - `/auth/refresh` only rotates access cookie; frontend uses localStorage token as source of truth.
