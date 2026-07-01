@@ -1,0 +1,32 @@
+{
+  "summary": "Tested new/changed Checkout & Order Confirmation. 8/8 backend tests (new file test_shop_checkout.py) and 8/8 frontend UI flows PASSED. Verified: shipping cost math (89.5 + standard/express/overnight = 89.5 / 99.49 / 114.49), shipping.eta text ('5-7 business days', '2-3 business days', 'next business day'), GET /shop/orders/{id} auth-scoping (401 no-auth, 404 for other user's order, 404 for unknown id, _id/owner excluded). Frontend: ZIP auto-populate for 90001 (US/California/LA) and unknown 00000 (notfound), cascading country->state (India states populate, state resets on country change), shipping method radio updates delivery-estimate + summary-shipping + checkout-total, place-order navigates to /shop/order/<id>, OrderConfirmation shows all confirmation-* elements with correct data (express, 2-3 business days, 400001/Mumbai/Maharashtra/India, total $99.49, confirmation-item-p2), cart cleared after order (cart-badge gone), view-all-orders and continue-shopping links correct, unknown order id shows order-not-found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Checkout delivery-estimate vs Backend ETA", "issues": ["Frontend SHIPPING_METHODS uses en-dash '2–3 business days' / '5–7 business days' but backend SHIPPING_ETA uses ASCII hyphen '2-3 business days' / '5-7 business days'. Cosmetic inconsistency; on the confirmation page the backend value is shown (hyphen) while on the checkout page the frontend value is shown (en-dash). Consider unifying to one style so the ETA text is identical across screens."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_shop_checkout.py", "/app/test_reports/pytest/shop_checkout_results.xml"],
+  "action_items": [
+    "OPTIONAL/COSMETIC: Align dash style for shipping ETA text between frontend SHIPPING_METHODS (en-dash) and backend SHIPPING_ETA (ASCII hyphen) so Checkout and OrderConfirmation display identical strings."
+  ],
+  "critical_code_review_comments": [
+    "Checkout.jsx: onZipChange uppercases only the lookup key (good for 'm5h' -> 'M5H'), but the ZIP saved to the form is the raw input; that's fine but consider normalising on submit for consistency in stored orders.",
+    "Checkout.jsx: When ZIP auto-fills a country (e.g., 90001 -> United States), the shipping_state is set directly, bypassing the 'reset state on country change' behaviour. This is intentional and works, but note that subsequently typing another known ZIP will overwrite the user's manual state selection without warning. Acceptable for a practice ground.",
+    "server.py create_order: order 'owner' is stored as str(user['_id']); GET /shop/orders/{id} correctly filters by owner and excludes _id/owner in projection. Verified.",
+    "server.py OrderInput: shipping_country and shipping_state default to '' (empty). Backend does not validate that the method is one of standard/express/overnight; unknown methods silently fall back to cost=0.0 and eta=''. Consider Enum validation.",
+    "OrderConfirmation.jsx: uses order.subtotal ?? order.total for subtotal display — good defensive fallback."
+  ],
+  "updated_files": ["/app/backend/tests/test_shop_checkout.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (8/8)"},
+  "test_credentials": "tester@practiceground.dev / Test@Ground2026 (default user); sdet@example.com / test1234 (alt user auto-registered by fixture)",
+  "seed_data_creation": "Test orders created via API using product p2 with TEST_ prefixed shipping_name (not cleaned up — orders API has no delete endpoint; low volume so acceptable).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New backend regression file /app/backend/tests/test_shop_checkout.py covers POST /shop/orders shipping methods (standard/express/overnight + default) and GET /shop/orders/{id} auth scoping. Run with: pytest /app/backend/tests/test_shop_checkout.py -v. Frontend flows verified end-to-end through /shop/checkout -> /shop/order/:id. Note: ZIP debounce is ~900ms — wait for zip-found/zip-notfound testids. Backend ETA strings use ASCII hyphens; frontend SHIPPING_METHODS array uses en-dashes on the Checkout page only."
+}

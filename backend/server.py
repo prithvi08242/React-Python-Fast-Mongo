@@ -375,6 +375,13 @@ class OrderInput(BaseModel):
     shipping_address: str = Field(min_length=1)
     shipping_city: str = Field(min_length=1)
     shipping_zip: str = Field(min_length=1)
+    shipping_country: str = Field(default="")
+    shipping_state: str = Field(default="")
+    shipping_method: str = Field(default="standard")
+
+
+SHIPPING_COSTS = {"standard": 0.0, "express": 9.99, "overnight": 24.99}
+SHIPPING_ETA = {"standard": "5-7 business days", "express": "2-3 business days", "overnight": "next business day"}
 
 
 @api_router.get("/shop/products")
@@ -417,11 +424,15 @@ async def create_order(body: OrderInput, user: dict = Depends(get_current_user))
             "subtotal": subtotal,
         })
     total = round(total, 2)
+    shipping_cost = SHIPPING_COSTS.get(body.shipping_method, 0.0)
+    grand_total = round(total + shipping_cost, 2)
     order = {
         "id": str(uuid.uuid4()),
         "owner": str(user["_id"]),
         "items": line_items,
-        "total": total,
+        "subtotal": total,
+        "shipping_cost": shipping_cost,
+        "total": grand_total,
         "item_count": sum(i.qty for i in body.items),
         "status": "confirmed",
         "shipping": {
@@ -429,6 +440,10 @@ async def create_order(body: OrderInput, user: dict = Depends(get_current_user))
             "address": body.shipping_address,
             "city": body.shipping_city,
             "zip": body.shipping_zip,
+            "country": body.shipping_country,
+            "state": body.shipping_state,
+            "method": body.shipping_method,
+            "eta": SHIPPING_ETA.get(body.shipping_method, ""),
         },
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -442,6 +457,14 @@ async def create_order(body: OrderInput, user: dict = Depends(get_current_user))
 async def my_orders(user: dict = Depends(get_current_user)):
     docs = await db.orders.find({"owner": str(user["_id"])}, {"_id": 0, "owner": 0}).sort("created_at", -1).to_list(100)
     return {"data": docs, "total": len(docs)}
+
+
+@api_router.get("/shop/orders/{order_id}")
+async def get_order(order_id: str, user: dict = Depends(get_current_user)):
+    doc = await db.orders.find_one({"id": order_id, "owner": str(user["_id"])}, {"_id": 0, "owner": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return doc
 
 
 # ---------------------------------------------------------------------------

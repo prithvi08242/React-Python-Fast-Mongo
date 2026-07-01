@@ -14,6 +14,7 @@ import Shop from "@/pages/shop/Shop";
 import ProductDetail from "@/pages/shop/ProductDetail";
 import Cart from "@/pages/shop/Cart";
 import Checkout from "@/pages/shop/Checkout";
+import OrderConfirmation from "@/pages/shop/OrderConfirmation";
 import Orders from "@/pages/shop/Orders";
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
               <Route path="/shop/product/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
               <Route path="/shop/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
               <Route path="/shop/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+              <Route path="/shop/order/:id" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
               <Route path="/shop/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             </Routes>
           </CartProvider>
