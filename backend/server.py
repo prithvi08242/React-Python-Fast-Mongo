@@ -339,8 +339,119 @@ async def sample_users():
 
 
 # ---------------------------------------------------------------------------
+# Shop (small e-commerce for browse -> cart -> checkout -> orders practice)
+# ---------------------------------------------------------------------------
+IMG = "https://static.prod-images.emergentagent.com/jobs/bd9da897-6a8d-4867-b609-1dbb1bd3815d/images/"
+SEED_PRODUCTS = [
+    {"id": "p1", "name": "Aero Wireless Headphones", "price": 129.99, "category": "audio", "stock": 25,
+     "image": IMG + "63c41db534c895c6b2c8652a351325dd707240d34605b098d53843dc4ee02e57.png",
+     "description": "Over-ear wireless headphones with active noise cancellation and 30h battery."},
+    {"id": "p2", "name": "Compact Mechanical Keyboard", "price": 89.50, "category": "peripherals", "stock": 40,
+     "image": IMG + "ce192cbe9c4470bab43d32e4a1c0ff5d79aa3273b19ec836673fa07dd3e418cc.png",
+     "description": "65% hot-swappable mechanical keyboard with per-key RGB backlight."},
+    {"id": "p3", "name": "Ergo Wireless Mouse", "price": 49.00, "category": "peripherals", "stock": 60,
+     "image": IMG + "371abcc92026200a4a95fb0f4a806bddb4b566cd78317f3e66fe298984cdcc67.png",
+     "description": "Ergonomic wireless mouse with silent clicks and 4000 DPI sensor."},
+    {"id": "p4", "name": "Studio 4K Webcam", "price": 99.99, "category": "video", "stock": 18,
+     "image": IMG + "74867aba4e91dac7fedff58fcc943924f27b66bace634b293be2b61f805c0cfa.png",
+     "description": "4K UHD webcam with autofocus and dual noise-cancelling mics."},
+    {"id": "p5", "name": "Minimalist LED Desk Lamp", "price": 39.99, "category": "office", "stock": 35,
+     "image": IMG + "2d8532c3b4dfe3de2fd7ff20b64300f15a170855943557b25c7739798c1c88e2.png",
+     "description": "Dimmable LED desk lamp with adjustable arm and warm/cool modes."},
+    {"id": "p6", "name": "Matte Ceramic Coffee Mug", "price": 14.99, "category": "office", "stock": 100,
+     "image": IMG + "1b305f7fa2ba4cec3b0bce3576569701c0974fd350a4ebca6161774f5a47fbde.png",
+     "description": "350ml matte-black ceramic mug, dishwasher and microwave safe."},
+]
+
+
+class OrderItemInput(BaseModel):
+    product_id: str
+    qty: int = Field(ge=1)
+
+
+class OrderInput(BaseModel):
+    items: List[OrderItemInput]
+    shipping_name: str = Field(min_length=1)
+    shipping_address: str = Field(min_length=1)
+    shipping_city: str = Field(min_length=1)
+    shipping_zip: str = Field(min_length=1)
+
+
+@api_router.get("/shop/products")
+async def list_products(category: Optional[str] = None, search: Optional[str] = None):
+    query: dict = {}
+    if category and category != "all":
+        query["category"] = category
+    if search:
+        query["name"] = {"$regex": search, "$options": "i"}
+    docs = await db.products.find(query, {"_id": 0}).sort("price", 1).to_list(100)
+    cats = await db.products.distinct("category")
+    return {"data": docs, "total": len(docs), "categories": sorted(cats)}
+
+
+@api_router.get("/shop/products/{product_id}")
+async def get_product(product_id: str):
+    doc = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return doc
+
+
+@api_router.post("/shop/orders", status_code=201)
+async def create_order(body: OrderInput, user: dict = Depends(get_current_user)):
+    if not body.items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+    line_items = []
+    total = 0.0
+    for item in body.items:
+        product = await db.products.find_one({"id": item.product_id}, {"_id": 0})
+        if not product:
+            raise HTTPException(status_code=400, detail=f"Product {item.product_id} not found")
+        subtotal = round(product["price"] * item.qty, 2)
+        total += subtotal
+        line_items.append({
+            "product_id": product["id"],
+            "name": product["name"],
+            "price": product["price"],
+            "qty": item.qty,
+            "subtotal": subtotal,
+        })
+    total = round(total, 2)
+    order = {
+        "id": str(uuid.uuid4()),
+        "owner": str(user["_id"]),
+        "items": line_items,
+        "total": total,
+        "item_count": sum(i.qty for i in body.items),
+        "status": "confirmed",
+        "shipping": {
+            "name": body.shipping_name,
+            "address": body.shipping_address,
+            "city": body.shipping_city,
+            "zip": body.shipping_zip,
+        },
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.orders.insert_one(order)
+    order.pop("owner", None)
+    order.pop("_id", None)
+    return order
+
+
+@api_router.get("/shop/orders")
+async def my_orders(user: dict = Depends(get_current_user)):
+    docs = await db.orders.find({"owner": str(user["_id"])}, {"_id": 0, "owner": 0}).sort("created_at", -1).to_list(100)
+    return {"data": docs, "total": len(docs)}
+
+
+# ---------------------------------------------------------------------------
 # Startup
 # ---------------------------------------------------------------------------
+async def seed_products():
+    for p in SEED_PRODUCTS:
+        await db.products.update_one({"id": p["id"]}, {"$set": p}, upsert=True)
+
+
 async def seed_admin():
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com").lower()
     admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
@@ -364,6 +475,7 @@ async def on_startup():
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.login_attempts.create_index("identifier")
     await seed_admin()
+    await seed_products()
 
 
 @app.on_event("shutdown")

@@ -1,10 +1,12 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Terminal, LogOut, User, FlaskConical } from "lucide-react";
+import { Terminal, LogOut, User, FlaskConical, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 
 export const Header = () => {
   const { user, logout } = useAuth();
+  const { count } = useCart();
   const loc = useLocation();
   const linkCls = (path) =>
     `text-sm font-medium transition-colors ${
@@ -23,12 +25,23 @@ export const Header = () => {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-6">
+        <nav className="flex items-center gap-5 sm:gap-6">
           <Link to="/practice" data-testid="nav-practice" className={linkCls("/practice")}>
             Practice
           </Link>
           <Link to="/rest-playground" data-testid="nav-api" className={linkCls("/rest-playground")}>
             API Playground
+          </Link>
+          <Link to="/shop" data-testid="nav-shop" className={linkCls("/shop")}>
+            Shop
+          </Link>
+          <Link to="/shop/cart" data-testid="nav-cart" className="relative text-zinc-400 hover:text-zinc-100 transition-colors">
+            <ShoppingCart className="w-5 h-5" />
+            {count > 0 && (
+              <span data-testid="cart-badge" className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                {count}
+              </span>
+            )}
           </Link>
           {user ? (
             <div className="flex items-center gap-3">
