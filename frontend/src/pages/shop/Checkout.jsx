@@ -1,88 +1,23 @@
-import React, { useRef, useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
-import { api, formatApiErrorDetail } from "@/lib/api";
 import { useCart } from "@/context/CartContext";
-import { COUNTRIES, ZIP_LOOKUP, SHIPPING_METHODS, statesForCountry } from "@/data/locations";
+import { useCheckoutForm } from "@/hooks/useCheckoutForm";
+import { COUNTRIES, SHIPPING_METHODS } from "@/data/locations";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+
+const INPUT_CLS =
+  "w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 outline-none";
+const LABEL_CLS = "text-xs font-mono uppercase tracking-widest text-zinc-400";
 
 export default function Checkout() {
   const { items, total, clear } = useCart();
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    shipping_name: "",
-    shipping_address: "",
-    shipping_country: "",
-    shipping_state: "",
-    shipping_city: "",
-    shipping_zip: "",
-    shipping_method: "standard",
-  });
-  const [zipStatus, setZipStatus] = useState(""); // "", looking, found, notfound
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const zipTimer = useRef(null);
-
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
-  const onCountryChange = (name) => {
-    // cascading reset: changing country clears the dependent state
-    setForm((f) => ({ ...f, shipping_country: name, shipping_state: "" }));
-  };
-
-  const onZipChange = (value) => {
-    set("shipping_zip", value);
-    if (zipTimer.current) clearTimeout(zipTimer.current);
-    const key = value.trim().toUpperCase();
-    if (key.length < 3) {
-      setZipStatus("");
-      return;
-    }
-    // simulate an async ZIP lookup service (practice waits)
-    setZipStatus("looking");
-    zipTimer.current = setTimeout(() => {
-      const match = ZIP_LOOKUP[key];
-      if (match) {
-        setForm((f) => ({
-          ...f,
-          shipping_zip: value,
-          shipping_country: match.country,
-          shipping_state: match.state,
-          shipping_city: match.city,
-        }));
-        setZipStatus("found");
-      } else {
-        setZipStatus("notfound");
-      }
-    }, 900);
-  };
-
-  const availableStates = statesForCountry(form.shipping_country);
-  const method = SHIPPING_METHODS.find((m) => m.id === form.shipping_method) || SHIPPING_METHODS[0];
-  const grandTotal = Math.round((total + method.cost) * 100) / 100;
-
-  const placeOrder = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const { data } = await api.post("/shop/orders", {
-        ...form,
-        items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
-      });
-      clear();
-      navigate(`/shop/order/${data.id}`);
-    } catch (err) {
-      setError(formatApiErrorDetail(err.response?.data?.detail) || err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const cf = useCheckoutForm({ items, total, clear, navigate });
+  const { form, set, onCountryChange, onZipChange, zipStatus, error, loading, availableStates, method, grandTotal } = cf;
 
   if (items.length === 0) {
     return <div data-testid="checkout-empty" className="max-w-3xl mx-auto px-6 py-24 text-center text-zinc-400">Your cart is empty.</div>;
   }
-
-  const inputCls = "w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 outline-none";
 
   return (
     <div className="max-w-[980px] mx-auto px-4 sm:px-6 lg:px-8 py-10 grid gap-8 md:grid-cols-[1.4fr_1fr]">
@@ -90,23 +25,23 @@ export default function Checkout() {
         <h1 className="font-heading text-3xl font-black tracking-tighter text-zinc-50">Checkout</h1>
         {error && <div data-testid="checkout-error" className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</div>}
 
-        <form onSubmit={placeOrder} className="mt-6 space-y-5" data-testid="checkout-form">
+        <form onSubmit={cf.placeOrder} className="mt-6 space-y-5" data-testid="checkout-form">
           <div>
-            <label className="text-xs font-mono uppercase tracking-widest text-zinc-400">Full name</label>
-            <input data-testid="ship-name" value={form.shipping_name} onChange={(e) => set("shipping_name", e.target.value)} required className={`mt-1.5 ${inputCls}`} />
+            <label className={LABEL_CLS}>Full name</label>
+            <input data-testid="ship-name" value={form.shipping_name} onChange={(e) => set("shipping_name", e.target.value)} required className={`mt-1.5 ${INPUT_CLS}`} />
           </div>
           <div>
-            <label className="text-xs font-mono uppercase tracking-widest text-zinc-400">Address</label>
-            <input data-testid="ship-address" value={form.shipping_address} onChange={(e) => set("shipping_address", e.target.value)} required className={`mt-1.5 ${inputCls}`} />
+            <label className={LABEL_CLS}>Address</label>
+            <input data-testid="ship-address" value={form.shipping_address} onChange={(e) => set("shipping_address", e.target.value)} required className={`mt-1.5 ${INPUT_CLS}`} />
           </div>
 
           {/* ZIP with async auto-populate */}
           <div>
-            <label className="text-xs font-mono uppercase tracking-widest text-zinc-400">
+            <label className={LABEL_CLS}>
               ZIP / Postal code <span className="text-zinc-600 normal-case">(try 400001, 90001, 10115, M5H)</span>
             </label>
             <div className="relative mt-1.5">
-              <input data-testid="ship-zip" value={form.shipping_zip} onChange={(e) => onZipChange(e.target.value)} required className={inputCls} placeholder="Enter ZIP to auto-fill" />
+              <input data-testid="ship-zip" value={form.shipping_zip} onChange={(e) => onZipChange(e.target.value)} required className={INPUT_CLS} placeholder="Enter ZIP to auto-fill" />
               <span className="absolute right-3 top-1/2 -translate-y-1/2">
                 {zipStatus === "looking" && <Loader2 data-testid="zip-loading" className="w-4 h-4 text-blue-400 animate-spin" />}
                 {zipStatus === "found" && <CheckCircle2 data-testid="zip-found" className="w-4 h-4 text-emerald-400" />}
@@ -123,21 +58,21 @@ export default function Checkout() {
           {/* Cascading country -> state */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-mono uppercase tracking-widest text-zinc-400">Country</label>
-              <select data-testid="ship-country" value={form.shipping_country} onChange={(e) => onCountryChange(e.target.value)} required className={`mt-1.5 ${inputCls}`}>
+              <label className={LABEL_CLS}>Country</label>
+              <select data-testid="ship-country" value={form.shipping_country} onChange={(e) => onCountryChange(e.target.value)} required className={`mt-1.5 ${INPUT_CLS}`}>
                 <option value="">Select country</option>
                 {COUNTRIES.map((c) => <option key={c.code} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-mono uppercase tracking-widest text-zinc-400">State / Province</label>
+              <label className={LABEL_CLS}>State / Province</label>
               <select
                 data-testid="ship-state"
                 value={form.shipping_state}
                 onChange={(e) => set("shipping_state", e.target.value)}
                 required
                 disabled={!form.shipping_country}
-                className={`mt-1.5 ${inputCls} disabled:opacity-50 disabled:cursor-not-allowed`}
+                className={`mt-1.5 ${INPUT_CLS} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <option value="">{form.shipping_country ? "Select state" : "Select country first"}</option>
                 {availableStates.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -146,13 +81,13 @@ export default function Checkout() {
           </div>
 
           <div>
-            <label className="text-xs font-mono uppercase tracking-widest text-zinc-400">City</label>
-            <input data-testid="ship-city" value={form.shipping_city} onChange={(e) => set("shipping_city", e.target.value)} required className={`mt-1.5 ${inputCls}`} />
+            <label className={LABEL_CLS}>City</label>
+            <input data-testid="ship-city" value={form.shipping_city} onChange={(e) => set("shipping_city", e.target.value)} required className={`mt-1.5 ${INPUT_CLS}`} />
           </div>
 
           {/* Shipping method radio -> dynamic ETA/cost */}
           <div>
-            <label className="text-xs font-mono uppercase tracking-widest text-zinc-400">Shipping method</label>
+            <label className={LABEL_CLS}>Shipping method</label>
             <div className="mt-2 space-y-2" data-testid="shipping-methods">
               {SHIPPING_METHODS.map((m) => (
                 <label key={m.id} data-testid={`shipping-method-${m.id}`} className={`flex items-center justify-between rounded-md border px-3 py-2.5 cursor-pointer transition-colors ${form.shipping_method === m.id ? "border-blue-500 bg-blue-500/10" : "border-zinc-800 bg-zinc-950 hover:border-zinc-700"}`}>
