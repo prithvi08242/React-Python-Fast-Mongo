@@ -28,5 +28,16 @@ jobs:
       working-directory: backend
       run: flake8 .
         
-  
-    
+    - name: Setup Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: "22"
+      
+    - name: Install Frontend Dependencies
+      working-directory: frontend
+      run: yarn install
+      
+    - name: Frontend eslint
+      working-directory: frontend
+      run: yarn lint
+      
