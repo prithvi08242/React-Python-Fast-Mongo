@@ -1,9 +1,3 @@
-from dotenv import load_dotenv
-from pathlib import Path
-
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / ".env")
-
 import os
 import jwt
 import bcrypt
@@ -11,6 +5,14 @@ import uuid
 import asyncio
 import secrets
 import logging
+
+from dotenv import load_dotenv
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / ".env")
+
+
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 
