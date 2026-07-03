@@ -8,20 +8,17 @@ import logging
 
 from dotenv import load_dotenv
 from pathlib import Path
-
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / ".env")
-
-
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
-
 from fastapi import FastAPI, APIRouter, Request, Response, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 from pydantic import BaseModel, EmailStr, Field
+
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / ".env")
 
 # ---------------------------------------------------------------------------
 # Config / DB
