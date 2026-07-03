@@ -94,7 +94,7 @@ export function ComplexDom() {
               <li className="text-emerald-400 py-1" data-testid="complex-item-3"><span className="tag target">gamma (nth-child 3)</span></li>
             </ul>
             <div className="pl-4 border-l border-zinc-800 mt-2" data-level="3">
-              <a href="#" data-testid="complex-deep-link" className="text-blue-400">deeply nested link (div > div > div a)</a>
+              <a href="#" data-testid="complex-deep-link" className="text-blue-400">deeply nested link (div &gt; div &gt; div a)</a>
             </div>
           </div>
         </div>
