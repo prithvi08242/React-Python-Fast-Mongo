@@ -34,7 +34,9 @@ JWT_ALGORITHM = "HS256"
 MAX_FAILED_ATTEMPTS = 5
 LOCKOUT_MINUTES = 15
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger("practice-ground")
 
 app = FastAPI(title="Test Automation & DevOps Practice Ground API")
@@ -76,8 +78,24 @@ def create_refresh_token(user_id: str) -> str:
 
 
 def set_auth_cookies(response: Response, access: str, refresh: str) -> None:
-    response.set_cookie("access_token", access, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie("refresh_token", refresh, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    response.set_cookie(
+        "access_token",
+        access,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=3600,
+        path="/",
+    )
+    response.set_cookie(
+        "refresh_token",
+        refresh,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=604800,
+        path="/",
+    )
 
 
 def public_user(user: dict) -> dict:
@@ -157,16 +175,24 @@ async def login(body: LoginInput, request: Request, response: Response):
     attempt = await db.login_attempts.find_one({"identifier": identifier})
     if attempt and attempt.get("count", 0) >= MAX_FAILED_ATTEMPTS:
         locked_until = attempt.get("locked_until")
-        if locked_until and datetime.fromisoformat(locked_until) > datetime.now(timezone.utc):
-            raise HTTPException(status_code=429, detail="Too many failed attempts. Try again later.")
+        if locked_until and datetime.fromisoformat(locked_until) > datetime.now(
+            timezone.utc
+        ):
+            raise HTTPException(
+                status_code=429, detail="Too many failed attempts. Try again later."
+            )
 
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(body.password, user["password_hash"]):
         new_count = (attempt.get("count", 0) if attempt else 0) + 1
         update = {"count": new_count}
         if new_count >= MAX_FAILED_ATTEMPTS:
-            update["locked_until"] = (datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)).isoformat()
-        await db.login_attempts.update_one({"identifier": identifier}, {"$set": update}, upsert=True)
+            update["locked_until"] = (
+                datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)
+            ).isoformat()
+        await db.login_attempts.update_one(
+            {"identifier": identifier}, {"$set": update}, upsert=True
+        )
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     await db.login_attempts.delete_one({"identifier": identifier})
@@ -201,7 +227,15 @@ async def refresh_token(request: Request, response: Response):
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         access = create_access_token(str(user["_id"]), user["email"])
-        response.set_cookie("access_token", access, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
+        response.set_cookie(
+            "access_token",
+            access,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=3600,
+            path="/",
+        )
         return {"access_token": access, "token_type": "bearer"}
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
@@ -250,7 +284,13 @@ async def list_todos(
         query["title"] = {"$regex": search, "$options": "i"}
     total = await db.todos.count_documents(query)
     skip = (page - 1) * limit
-    docs = await db.todos.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    docs = (
+        await db.todos.find(query, {"_id": 0})
+        .sort("created_at", -1)
+        .skip(skip)
+        .limit(limit)
+        .to_list(limit)
+    )
     return {
         "data": [todo_public(d) for d in docs],
         "page": page,
@@ -283,11 +323,17 @@ async def get_todo(todo_id: str):
 
 
 @api_router.put("/playground/todos/{todo_id}")
-async def update_todo(todo_id: str, body: TodoInput, user: dict = Depends(get_current_user)):
+async def update_todo(
+    todo_id: str, body: TodoInput, user: dict = Depends(get_current_user)
+):
     doc = await db.todos.find_one({"id": todo_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Todo not found")
-    update = {"title": body.title, "completed": body.completed, "priority": body.priority}
+    update = {
+        "title": body.title,
+        "completed": body.completed,
+        "priority": body.priority,
+    }
     await db.todos.update_one({"id": todo_id}, {"$set": update})
     doc.update(update)
     return todo_public(doc)
@@ -305,7 +351,10 @@ async def delete_todo(todo_id: str, user: dict = Depends(get_current_user)):
 async def echo_status(code: int):
     if code < 100 or code > 599:
         raise HTTPException(status_code=400, detail="Invalid status code")
-    return JSONResponse(status_code=code, content={"status_code": code, "message": f"Returned status {code}"})
+    return JSONResponse(
+        status_code=code,
+        content={"status_code": code, "message": f"Returned status {code}"},
+    )
 
 
 @api_router.get("/playground/delay/{seconds}")
@@ -345,24 +394,66 @@ async def sample_users():
 # ---------------------------------------------------------------------------
 IMG = "https://static.prod-images.emergentagent.com/jobs/bd9da897-6a8d-4867-b609-1dbb1bd3815d/images/"
 SEED_PRODUCTS = [
-    {"id": "p1", "name": "Aero Wireless Headphones", "price": 129.99, "category": "audio", "stock": 25,
-     "image": IMG + "63c41db534c895c6b2c8652a351325dd707240d34605b098d53843dc4ee02e57.png",
-     "description": "Over-ear wireless headphones with active noise cancellation and 30h battery."},
-    {"id": "p2", "name": "Compact Mechanical Keyboard", "price": 89.50, "category": "peripherals", "stock": 40,
-     "image": IMG + "ce192cbe9c4470bab43d32e4a1c0ff5d79aa3273b19ec836673fa07dd3e418cc.png",
-     "description": "65% hot-swappable mechanical keyboard with per-key RGB backlight."},
-    {"id": "p3", "name": "Ergo Wireless Mouse", "price": 49.00, "category": "peripherals", "stock": 60,
-     "image": IMG + "371abcc92026200a4a95fb0f4a806bddb4b566cd78317f3e66fe298984cdcc67.png",
-     "description": "Ergonomic wireless mouse with silent clicks and 4000 DPI sensor."},
-    {"id": "p4", "name": "Studio 4K Webcam", "price": 99.99, "category": "video", "stock": 18,
-     "image": IMG + "74867aba4e91dac7fedff58fcc943924f27b66bace634b293be2b61f805c0cfa.png",
-     "description": "4K UHD webcam with autofocus and dual noise-cancelling mics."},
-    {"id": "p5", "name": "Minimalist LED Desk Lamp", "price": 39.99, "category": "office", "stock": 35,
-     "image": IMG + "2d8532c3b4dfe3de2fd7ff20b64300f15a170855943557b25c7739798c1c88e2.png",
-     "description": "Dimmable LED desk lamp with adjustable arm and warm/cool modes."},
-    {"id": "p6", "name": "Matte Ceramic Coffee Mug", "price": 14.99, "category": "office", "stock": 100,
-     "image": IMG + "1b305f7fa2ba4cec3b0bce3576569701c0974fd350a4ebca6161774f5a47fbde.png",
-     "description": "350ml matte-black ceramic mug, dishwasher and microwave safe."},
+    {
+        "id": "p1",
+        "name": "Aero Wireless Headphones",
+        "price": 129.99,
+        "category": "audio",
+        "stock": 25,
+        "image": IMG
+        + "63c41db534c895c6b2c8652a351325dd707240d34605b098d53843dc4ee02e57.png",
+        "description": "Over-ear wireless headphones with active noise cancellation and 30h battery.",
+    },
+    {
+        "id": "p2",
+        "name": "Compact Mechanical Keyboard",
+        "price": 89.50,
+        "category": "peripherals",
+        "stock": 40,
+        "image": IMG
+        + "ce192cbe9c4470bab43d32e4a1c0ff5d79aa3273b19ec836673fa07dd3e418cc.png",
+        "description": "65% hot-swappable mechanical keyboard with per-key RGB backlight.",
+    },
+    {
+        "id": "p3",
+        "name": "Ergo Wireless Mouse",
+        "price": 49.00,
+        "category": "peripherals",
+        "stock": 60,
+        "image": IMG
+        + "371abcc92026200a4a95fb0f4a806bddb4b566cd78317f3e66fe298984cdcc67.png",
+        "description": "Ergonomic wireless mouse with silent clicks and 4000 DPI sensor.",
+    },
+    {
+        "id": "p4",
+        "name": "Studio 4K Webcam",
+        "price": 99.99,
+        "category": "video",
+        "stock": 18,
+        "image": IMG
+        + "74867aba4e91dac7fedff58fcc943924f27b66bace634b293be2b61f805c0cfa.png",
+        "description": "4K UHD webcam with autofocus and dual noise-cancelling mics.",
+    },
+    {
+        "id": "p5",
+        "name": "Minimalist LED Desk Lamp",
+        "price": 39.99,
+        "category": "office",
+        "stock": 35,
+        "image": IMG
+        + "2d8532c3b4dfe3de2fd7ff20b64300f15a170855943557b25c7739798c1c88e2.png",
+        "description": "Dimmable LED desk lamp with adjustable arm and warm/cool modes.",
+    },
+    {
+        "id": "p6",
+        "name": "Matte Ceramic Coffee Mug",
+        "price": 14.99,
+        "category": "office",
+        "stock": 100,
+        "image": IMG
+        + "1b305f7fa2ba4cec3b0bce3576569701c0974fd350a4ebca6161774f5a47fbde.png",
+        "description": "350ml matte-black ceramic mug, dishwasher and microwave safe.",
+    },
 ]
 
 
@@ -383,7 +474,11 @@ class OrderInput(BaseModel):
 
 
 SHIPPING_COSTS = {"standard": 0.0, "express": 9.99, "overnight": 24.99}
-SHIPPING_ETA = {"standard": "5-7 business days", "express": "2-3 business days", "overnight": "next business day"}
+SHIPPING_ETA = {
+    "standard": "5-7 business days",
+    "express": "2-3 business days",
+    "overnight": "next business day",
+}
 
 
 @api_router.get("/shop/products")
@@ -415,16 +510,20 @@ async def create_order(body: OrderInput, user: dict = Depends(get_current_user))
     for item in body.items:
         product = await db.products.find_one({"id": item.product_id}, {"_id": 0})
         if not product:
-            raise HTTPException(status_code=400, detail=f"Product {item.product_id} not found")
+            raise HTTPException(
+                status_code=400, detail=f"Product {item.product_id} not found"
+            )
         subtotal = round(product["price"] * item.qty, 2)
         total += subtotal
-        line_items.append({
-            "product_id": product["id"],
-            "name": product["name"],
-            "price": product["price"],
-            "qty": item.qty,
-            "subtotal": subtotal,
-        })
+        line_items.append(
+            {
+                "product_id": product["id"],
+                "name": product["name"],
+                "price": product["price"],
+                "qty": item.qty,
+                "subtotal": subtotal,
+            }
+        )
     total = round(total, 2)
     shipping_cost = SHIPPING_COSTS.get(body.shipping_method, 0.0)
     grand_total = round(total + shipping_cost, 2)
@@ -457,13 +556,19 @@ async def create_order(body: OrderInput, user: dict = Depends(get_current_user))
 
 @api_router.get("/shop/orders")
 async def my_orders(user: dict = Depends(get_current_user)):
-    docs = await db.orders.find({"owner": str(user["_id"])}, {"_id": 0, "owner": 0}).sort("created_at", -1).to_list(100)
+    docs = (
+        await db.orders.find({"owner": str(user["_id"])}, {"_id": 0, "owner": 0})
+        .sort("created_at", -1)
+        .to_list(100)
+    )
     return {"data": docs, "total": len(docs)}
 
 
 @api_router.get("/shop/orders/{order_id}")
 async def get_order(order_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.orders.find_one({"id": order_id, "owner": str(user["_id"])}, {"_id": 0, "owner": 0})
+    doc = await db.orders.find_one(
+        {"id": order_id, "owner": str(user["_id"])}, {"_id": 0, "owner": 0}
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Order not found")
     return doc
@@ -482,16 +587,21 @@ async def seed_admin():
     admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
     existing = await db.users.find_one({"email": admin_email})
     if existing is None:
-        await db.users.insert_one({
-            "email": admin_email,
-            "password_hash": hash_password(admin_password),
-            "name": "Admin",
-            "role": "admin",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        await db.users.insert_one(
+            {
+                "email": admin_email,
+                "password_hash": hash_password(admin_password),
+                "name": "Admin",
+                "role": "admin",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
         logger.info("Seeded admin user %s", admin_email)
     elif not verify_password(admin_password, existing["password_hash"]):
-        await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
+        await db.users.update_one(
+            {"email": admin_email},
+            {"$set": {"password_hash": hash_password(admin_password)}},
+        )
 
 
 async def seed_default_user():
@@ -499,16 +609,20 @@ async def seed_default_user():
     password = os.environ.get("DEFAULT_USER_PASSWORD", "Test@Ground2026")
     existing = await db.users.find_one({"email": email})
     if existing is None:
-        await db.users.insert_one({
-            "email": email,
-            "password_hash": hash_password(password),
-            "name": "Default Tester",
-            "role": "user",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        await db.users.insert_one(
+            {
+                "email": email,
+                "password_hash": hash_password(password),
+                "name": "Default Tester",
+                "role": "user",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
         logger.info("Seeded default user %s", email)
     elif not verify_password(password, existing["password_hash"]):
-        await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(password)}})
+        await db.users.update_one(
+            {"email": email}, {"$set": {"password_hash": hash_password(password)}}
+        )
 
 
 @app.on_event("startup")

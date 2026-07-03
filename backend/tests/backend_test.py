@@ -2,13 +2,18 @@
 Covers: auth (register/login/me/logout), todos CRUD w/ auth, misc playground
 endpoints (health, status echo, delay, flaky, echo, users).
 """
+
 import os
 import time
 import uuid
 import pytest
 import requests
 
-BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/") if os.environ.get("REACT_APP_BACKEND_URL") else None
+BASE_URL = (
+    os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
+    if os.environ.get("REACT_APP_BACKEND_URL")
+    else None
+)
 if BASE_URL is None:
     # Fallback: read frontend/.env
     with open("/app/frontend/.env") as f:
@@ -31,7 +36,9 @@ def s():
 
 @pytest.fixture(scope="session")
 def admin_token(s):
-    r = s.post(f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = s.post(
+        f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
+    )
     assert r.status_code == 200, f"Admin login failed: {r.status_code} {r.text}"
     tok = r.json().get("access_token")
     assert tok
@@ -54,7 +61,9 @@ def test_health(s):
 
 # --- Auth ---
 def test_admin_login(s):
-    r = s.post(f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = s.post(
+        f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
+    )
     assert r.status_code == 200
     data = r.json()
     assert "access_token" in data
@@ -70,14 +79,20 @@ def test_login_wrong_password(s):
 
 def test_register_and_me(s):
     email = f"sdet+{uuid.uuid4().hex[:8]}@example.com"
-    r = s.post(f"{API}/auth/register", json={"email": email, "password": "test1234", "name": "SDET User"})
+    r = s.post(
+        f"{API}/auth/register",
+        json={"email": email, "password": "test1234", "name": "SDET User"},
+    )
     assert r.status_code == 200, r.text
     body = r.json()
     tok = body["access_token"]
     assert body["user"]["email"] == email
 
     # duplicate register
-    r2 = s.post(f"{API}/auth/register", json={"email": email, "password": "test1234", "name": "SDET User"})
+    r2 = s.post(
+        f"{API}/auth/register",
+        json={"email": email, "password": "test1234", "name": "SDET User"},
+    )
     assert r2.status_code == 400
 
     # /auth/me
@@ -99,7 +114,11 @@ def test_todos_requires_auth(s):
 
 def test_todos_crud(auth_headers):
     # Create
-    r = requests.post(f"{API}/playground/todos", json={"title": "TEST_todo_1", "priority": "high"}, headers=auth_headers)
+    r = requests.post(
+        f"{API}/playground/todos",
+        json={"title": "TEST_todo_1", "priority": "high"},
+        headers=auth_headers,
+    )
     assert r.status_code == 201, r.text
     todo = r.json()
     assert todo["title"] == "TEST_todo_1"

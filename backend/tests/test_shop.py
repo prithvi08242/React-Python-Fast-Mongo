@@ -2,6 +2,7 @@
 Covers: product listing, filters, product detail, order creation (auth required),
 order listing by user, isolation between users.
 """
+
 import os
 import uuid
 import pytest
@@ -22,7 +23,9 @@ ADMIN_PASSWORD = os.environ.get("TEST_ADMIN_PASSWORD", "admin123")
 
 @pytest.fixture(scope="module")
 def admin_token():
-    r = requests.post(f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    r = requests.post(
+        f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
+    )
     assert r.status_code == 200, f"Admin login failed: {r.text}"
     return r.json()["access_token"]
 
@@ -31,7 +34,10 @@ def admin_token():
 def user_token():
     """Fresh user for isolation tests."""
     email = f"shopuser+{uuid.uuid4().hex[:8]}@example.com"
-    r = requests.post(f"{API}/auth/register", json={"email": email, "password": "test1234", "name": "Shop User"})
+    r = requests.post(
+        f"{API}/auth/register",
+        json={"email": email, "password": "test1234", "name": "Shop User"},
+    )
     assert r.status_code == 200, r.text
     return r.json()["access_token"]
 
@@ -49,7 +55,9 @@ def test_list_products_seeded():
     prices = [p["price"] for p in body["data"]]
     assert prices == sorted(prices)
     # Categories present
-    assert set(["audio", "peripherals", "video", "office"]).issubset(set(body["categories"]))
+    assert set(["audio", "peripherals", "video", "office"]).issubset(
+        set(body["categories"])
+    )
 
 
 def test_filter_by_category_office():
@@ -138,7 +146,9 @@ def test_create_order_computes_total_server_side(admin_token):
     assert "owner" not in order
     assert order["shipping"]["city"] == "Testville"
     # Verify GET orders returns it
-    r2 = requests.get(f"{API}/shop/orders", headers={"Authorization": f"Bearer {admin_token}"})
+    r2 = requests.get(
+        f"{API}/shop/orders", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert r2.status_code == 200
     body = r2.json()
     ids = [o["id"] for o in body["data"]]
@@ -148,11 +158,19 @@ def test_create_order_computes_total_server_side(admin_token):
 def test_create_order_ignores_client_total(admin_token):
     """Even if client sends malicious price, server computes from DB."""
     payload = {
-        "items": [{"product_id": "p6", "qty": 1, "price": 0.01}],  # extra field ignored by pydantic
-        "shipping_name": "A", "shipping_address": "B", "shipping_city": "C", "shipping_zip": "1",
+        "items": [
+            {"product_id": "p6", "qty": 1, "price": 0.01}
+        ],  # extra field ignored by pydantic
+        "shipping_name": "A",
+        "shipping_address": "B",
+        "shipping_city": "C",
+        "shipping_zip": "1",
     }
-    r = requests.post(f"{API}/shop/orders", json=payload,
-                      headers={"Authorization": f"Bearer {admin_token}"})
+    r = requests.post(
+        f"{API}/shop/orders",
+        json=payload,
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
     assert r.status_code == 201
     assert r.json()["total"] == 14.99
 
@@ -162,7 +180,10 @@ def test_create_order_invalid_product(admin_token):
         f"{API}/shop/orders",
         json={
             "items": [{"product_id": "bogus", "qty": 1}],
-            "shipping_name": "A", "shipping_address": "B", "shipping_city": "C", "shipping_zip": "1",
+            "shipping_name": "A",
+            "shipping_address": "B",
+            "shipping_city": "C",
+            "shipping_zip": "1",
         },
         headers={"Authorization": f"Bearer {admin_token}"},
     )
@@ -172,7 +193,13 @@ def test_create_order_invalid_product(admin_token):
 def test_create_order_empty_items(admin_token):
     r = requests.post(
         f"{API}/shop/orders",
-        json={"items": [], "shipping_name": "A", "shipping_address": "B", "shipping_city": "C", "shipping_zip": "1"},
+        json={
+            "items": [],
+            "shipping_name": "A",
+            "shipping_address": "B",
+            "shipping_city": "C",
+            "shipping_zip": "1",
+        },
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert r.status_code == 400
@@ -184,7 +211,10 @@ def test_orders_are_user_scoped(user_token, admin_token):
         f"{API}/shop/orders",
         json={
             "items": [{"product_id": "p1", "qty": 1}],
-            "shipping_name": "U", "shipping_address": "X", "shipping_city": "Y", "shipping_zip": "0",
+            "shipping_name": "U",
+            "shipping_address": "X",
+            "shipping_city": "Y",
+            "shipping_zip": "0",
         },
         headers={"Authorization": f"Bearer {user_token}"},
     )
@@ -192,11 +222,15 @@ def test_orders_are_user_scoped(user_token, admin_token):
     user_order_id = r.json()["id"]
 
     # user sees own order
-    r = requests.get(f"{API}/shop/orders", headers={"Authorization": f"Bearer {user_token}"})
+    r = requests.get(
+        f"{API}/shop/orders", headers={"Authorization": f"Bearer {user_token}"}
+    )
     assert r.status_code == 200
     assert any(o["id"] == user_order_id for o in r.json()["data"])
 
     # admin should NOT see the user's order
-    r = requests.get(f"{API}/shop/orders", headers={"Authorization": f"Bearer {admin_token}"})
+    r = requests.get(
+        f"{API}/shop/orders", headers={"Authorization": f"Bearer {admin_token}"}
+    )
     assert r.status_code == 200
     assert not any(o["id"] == user_order_id for o in r.json()["data"])

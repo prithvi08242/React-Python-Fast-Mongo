@@ -2,9 +2,11 @@
 - POST /api/shop/orders with shipping_country/state/method
 - GET /api/shop/orders/{id} (auth-scoped)
 """
+
 import os
 import pytest
 import requests
+
 
 def _read_frontend_env():
     try:
@@ -16,7 +18,10 @@ def _read_frontend_env():
         pass
     return None
 
-BASE_URL = (os.environ.get("REACT_APP_BACKEND_URL") or _read_frontend_env() or "").rstrip("/")
+
+BASE_URL = (
+    os.environ.get("REACT_APP_BACKEND_URL") or _read_frontend_env() or ""
+).rstrip("/")
 assert BASE_URL, "REACT_APP_BACKEND_URL not set"
 API = f"{BASE_URL}/api"
 
@@ -55,11 +60,15 @@ def _headers(t):
 
 # ---------------- POST /shop/orders shipping method math ----------------
 
-@pytest.mark.parametrize("method,expected_cost,expected_eta", [
-    ("standard", 0.0, "5-7 business days"),
-    ("express", 9.99, "2-3 business days"),
-    ("overnight", 24.99, "next business day"),
-])
+
+@pytest.mark.parametrize(
+    "method,expected_cost,expected_eta",
+    [
+        ("standard", 0.0, "5-7 business days"),
+        ("express", 9.99, "2-3 business days"),
+        ("overnight", 24.99, "next business day"),
+    ],
+)
 def test_create_order_shipping_methods(token, method, expected_cost, expected_eta):
     payload = {
         "items": [{"product_id": "p2", "qty": 1}],
@@ -103,6 +112,7 @@ def test_create_order_default_method_is_standard(token):
 
 
 # ---------------- GET /shop/orders/{id} ----------------
+
 
 def test_get_order_by_id_returns_full_order(token):
     payload = {

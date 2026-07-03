@@ -24,7 +24,9 @@ def test_login_returns_token():
 
 
 def test_login_invalid():
-    r = requests.post(f"{BASE}/auth/login", json={"email": "admin@example.com", "password": "wrong"})
+    r = requests.post(
+        f"{BASE}/auth/login", json={"email": "admin@example.com", "password": "wrong"}
+    )
     assert r.status_code == 401
 
 
@@ -43,7 +45,9 @@ def test_create_todo_requires_auth():
 def test_create_and_delete_todo():
     token = auth_token()
     headers = {"Authorization": f"Bearer {token}"}
-    r = requests.post(f"{BASE}/playground/todos", json={"title": "pytest todo"}, headers=headers)
+    r = requests.post(
+        f"{BASE}/playground/todos", json={"title": "pytest todo"}, headers=headers
+    )
     assert r.status_code == 201
     todo_id = r.json()["id"]
     d = requests.delete(f"{BASE}/playground/todos/{todo_id}", headers=headers)
