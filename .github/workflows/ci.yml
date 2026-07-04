@@ -87,7 +87,11 @@ jobs:
             curl -sf http://localhost:8001/api/playground/health && break
             echo "Waiting for backend..."; sleep 2
           done
-    
+      - name: Run API tests (pytest)
+        env:
+          BASE_URL: http://localhost:8001
+        run: pip install requests pytest && pytest tests/api -q
+ 
       - name: Upload backend logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
