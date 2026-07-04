@@ -2,7 +2,7 @@ name: github-actions-ci
 on:
   push:
     branches:
-    - feature/*
+    - main
 jobs:
   verify-build:
     runs-on: ubuntu-latest
