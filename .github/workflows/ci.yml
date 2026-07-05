@@ -122,7 +122,7 @@ jobs:
         run: yarn test --watchAll=false
 
   e2e:
-    needs: [lint, backend-test, frontend-unit]
+    needs: [lint, backend-test, frontend-test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
