@@ -47,7 +47,7 @@ jobs:
         working-directory: frontend
         run: yarn eslint src --max-warnings=0
   
-  backend-tests:
+  backend-test:
     needs: lint
     runs-on: ubuntu-latest
     services:
@@ -99,7 +99,7 @@ jobs:
           name: backend-logs
           path: backend/uvicorn.log
     
-  frontend-tests:
+  frontend-test:
     needs: lint
     runs-on: ubuntu-latest
     steps:
@@ -120,5 +120,46 @@ jobs:
       - name: Run Jest unit tests
         working-directory: frontend
         run: yarn test --watchAll=false
+
+  e2e:
+    needs: [lint, backend-test, frontend-unit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+ 
+      - name: Build and start stack via docker-compose
+        run: docker compose up --build -d
+ 
+      - name: Wait for frontend to be ready
+        run: |
+          for i in {1..20}; do
+            curl -sf http://localhost:8080 && break
+            echo "Waiting for frontend..."; sleep 3
+          done
+ 
+      - name: Install Playwright
+        run: npm i -D @playwright/test && npx playwright install --with-deps chromium
+ 
+      - name: Run Playwright E2E tests
+        env:
+          BASE_URL: http://localhost:8080
+        run: npx playwright test
+ 
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+ 
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker compose logs
+ 
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
 
          
